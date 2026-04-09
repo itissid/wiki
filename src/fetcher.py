@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import json
+import logging
 import subprocess
+
+logger = logging.getLogger("wiki-mcp")
 
 
 def fetch_wiki(repo: str) -> str:
@@ -18,6 +21,7 @@ def fetch_wiki(repo: str) -> str:
         "formatting around it, just the wiki text as-is."
     )
 
+    logger.info("Fetching wiki for %s from DeepWiki (this may take 30-60s)...", repo)
     result = subprocess.run(
         [
             "claude",
@@ -43,6 +47,8 @@ def fetch_wiki(repo: str) -> str:
 
     data = json.loads(result.stdout)
     wiki_text = data.get("result", "")
+
+    logger.info("Fetched wiki for %s: %d chars", repo, len(wiki_text))
 
     if not wiki_text or len(wiki_text) < 100:
         raise ValueError(

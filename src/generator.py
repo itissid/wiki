@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import json
+import logging
 import subprocess
 import time
 
 from src.retriever import RetrievalResult
+
+logger = logging.getLogger("wiki-mcp")
 
 SYSTEM_PROMPT = (
     "You are a helpful assistant answering questions about a GitHub repository's documentation. "
@@ -34,6 +37,7 @@ def generate_answer(
 
     prompt = f"Question: {question}"
 
+    logger.info("Generating answer with model=%s using %d context chunks (%d chars)", model, len(context_chunks), len(context))
     start = time.time()
     result = subprocess.run(
         [
@@ -63,4 +67,5 @@ def generate_answer(
         )
 
     data = json.loads(result.stdout)
+    logger.info("Generation complete in %.0fms", generation_time_ms)
     return data["result"], generation_time_ms

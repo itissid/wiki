@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 
 from rank_bm25 import BM25Okapi
 
 from src.chunker import WikiChunk
 from src.indexer import _embed_texts
+
+logger = logging.getLogger("wiki-mcp")
 
 
 @dataclass
@@ -44,6 +47,7 @@ def hybrid_search(
     vector_candidates: int = 25,
 ) -> list[RetrievalResult]:
     """Run hybrid search and return top-n results via RRF."""
+    logger.info("Hybrid search: query=%r, n_results=%d", query[:80], n_results)
     # BM25 search
     tokenized_query = query.lower().split()
     bm25_scores = bm25.get_scores(tokenized_query)
@@ -62,6 +66,7 @@ def hybrid_search(
     # Merge via RRF
     fused = reciprocal_rank_fusion(bm25_top, vector_top)
 
+    logger.info("RRF fusion produced %d candidates, returning top %d", len(fused), n_results)
     # Build RetrievalResult objects
     results = []
     for chunk_idx, rrf_score in fused[:n_results]:

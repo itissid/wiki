@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import pickle
 from pathlib import Path
 
@@ -10,6 +11,8 @@ from fastembed import TextEmbedding
 from rank_bm25 import BM25Okapi
 
 from src.chunker import WikiChunk, chunk_wiki
+
+logger = logging.getLogger("wiki-mcp")
 
 EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
 COLLECTION_NAME = "wiki"
@@ -48,6 +51,7 @@ def is_indexed(repo: str, data_dir: str = "./data") -> bool:
 
 def build_index(repo: str, wiki_text: str, data_dir: str = "./data") -> int:
     """Chunk wiki text and build both ChromaDB and BM25 indexes. Returns chunk count."""
+    logger.info("Indexing %s (%d chars of wiki text)...", repo, len(wiki_text))
     chunks = chunk_wiki(wiki_text)
     if not chunks:
         raise ValueError(f"No chunks produced from wiki text for {repo}")
@@ -73,8 +77,10 @@ def build_index(repo: str, wiki_text: str, data_dir: str = "./data") -> int:
     )
 
     # Embed all chunk texts
+    logger.info("Embedding %d chunks with %s...", len(chunks), EMBEDDING_MODEL)
     all_texts = [c.text for c in chunks]
     all_embeddings = _embed_texts(all_texts)
+    logger.info("Embeddings complete, building ChromaDB index...")
 
     # Add chunks in batches of 100
     batch_size = 100
@@ -92,6 +98,7 @@ def build_index(repo: str, wiki_text: str, data_dir: str = "./data") -> int:
         )
 
     # --- BM25 keyword index ---
+    logger.info("Building BM25 index...")
     tokenized_corpus = [c.text.lower().split() for c in chunks]
     bm25 = BM25Okapi(tokenized_corpus)
 
@@ -100,7 +107,40 @@ def build_index(repo: str, wiki_text: str, data_dir: str = "./data") -> int:
     with open(repo_path / "chunks.pkl", "wb") as f:
         pickle.dump(chunks, f)
 
+    logger.info("Index complete for %s: %d chunks stored at %s", repo, len(chunks), repo_path)
     return len(chunks)
+
+
+def list_indexed_repos(data_dir: str = "./data") -> list[str]:
+    """Return list of repos that have been indexed (as owner/repo strings)."""
+    data_path = Path(data_dir)
+    if not data_path.exists():
+        return []
+    repos = []
+    for d in sorted(data_path.iterdir()):
+        if d.is_dir() and (d / "chromadb").exists() and (d / "bm25.pkl").exists():
+            # Convert owner_repo back to owner/repo
+            parts = d.name.split("_", 1)
+            if len(parts) == 2:
+                repos.append(f"{parts[0]}/{parts[1]}")
+    return repos
+
+
+def get_wiki_structure(repo: str, data_dir: str = "./data") -> dict[str, list[str]]:
+    """Return page -> [headings] structure for an indexed repo."""
+    if not is_indexed(repo, data_dir):
+        return {}
+    repo_path = _repo_dir(repo, data_dir)
+    with open(repo_path / "chunks.pkl", "rb") as f:
+        chunks: list[WikiChunk] = pickle.load(f)
+
+    structure: dict[str, list[str]] = {}
+    for chunk in chunks:
+        if chunk.page not in structure:
+            structure[chunk.page] = []
+        if chunk.heading not in structure[chunk.page]:
+            structure[chunk.page].append(chunk.heading)
+    return structure
 
 
 def load_index(
@@ -111,6 +151,8 @@ def load_index(
 
     if not is_indexed(repo, data_dir):
         raise FileNotFoundError(f"No index found for {repo} at {repo_path}")
+
+    logger.info("Loading existing index for %s from %s", repo, repo_path)
 
     # ChromaDB
     chroma_path = str(repo_path / "chromadb")
@@ -126,4 +168,5 @@ def load_index(
     with open(repo_path / "chunks.pkl", "rb") as f:
         chunks = pickle.load(f)
 
+    logger.info("Loaded index for %s: %d chunks", repo, len(chunks))
     return collection, bm25, chunks
