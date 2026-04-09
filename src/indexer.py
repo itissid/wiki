@@ -59,6 +59,14 @@ def build_index(repo: str, wiki_text: str, data_dir: str = "./data") -> int:
     repo_path = _repo_dir(repo, data_dir)
     repo_path.mkdir(parents=True, exist_ok=True)
 
+    # Embed all chunk texts first — this can take minutes on CPU,
+    # and ChromaDB collections go stale if there's a long gap between
+    # create_collection() and add().
+    logger.info("Embedding %d chunks with %s...", len(chunks), EMBEDDING_MODEL)
+    all_texts = [c.text for c in chunks]
+    all_embeddings = _embed_texts(all_texts)
+    logger.info("Embeddings complete, building ChromaDB index...")
+
     # --- ChromaDB vector index ---
     chroma_path = str(repo_path / "chromadb")
     client = chromadb.PersistentClient(
@@ -75,12 +83,6 @@ def build_index(repo: str, wiki_text: str, data_dir: str = "./data") -> int:
         name=COLLECTION_NAME,
         metadata={"embedding_model": EMBEDDING_MODEL},
     )
-
-    # Embed all chunk texts
-    logger.info("Embedding %d chunks with %s...", len(chunks), EMBEDDING_MODEL)
-    all_texts = [c.text for c in chunks]
-    all_embeddings = _embed_texts(all_texts)
-    logger.info("Embeddings complete, building ChromaDB index...")
 
     # Add chunks in batches of 100
     batch_size = 100

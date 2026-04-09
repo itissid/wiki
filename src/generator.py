@@ -63,7 +63,9 @@ def generate_answer(
 
     if result.returncode != 0:
         raise RuntimeError(
-            f"claude exited {result.returncode}: {result.stderr[:500]}"
+            f"claude exited {result.returncode}\n"
+            f"stderr: {result.stderr[:500]}\n"
+            f"stdout: {result.stdout[:500]}"
         )
 
     data = json.loads(result.stdout)
