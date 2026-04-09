@@ -10,6 +10,7 @@ dependencies = [
     "rank-bm25>=0.2.2",
     "baml-py>=0.207.1",
     "python-dotenv>=1.0.0",
+    "mcp>=1.0.0",
 ]
 
 [project.optional-dependencies]
