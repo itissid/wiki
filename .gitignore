@@ -1,0 +1,22 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Environment variables (secrets)
+.env
+
+# Data directory (indexes, cached wikis)
+data/
+
+# Generated BAML client (regenerated from baml_src/)
+baml_client/

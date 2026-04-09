@@ -1,0 +1,18 @@
+[project]
+name = "wiki"
+version = "0.1.0"
+description = "Local RAG MCP server replacing DeepWiki ask_question"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "chromadb>=0.5.0",
+    "fastembed>=0.4.0",
+    "rank-bm25>=0.2.2",
+    "baml-py>=0.207.1",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
