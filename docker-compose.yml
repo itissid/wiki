@@ -1,0 +1,19 @@
+services:
+  wiki-mcp:
+    build: .
+    container_name: wiki-mcp
+    expose:
+      - "8080"
+    volumes:
+      - /mnt/ServiceAndDataPool/projects/wiki/data:/data
+    environment:
+      - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN}
+      - DATA_DIR=/data
+      - PORT=8080
+    restart: unless-stopped
+    networks:
+      - wikinet
+
+networks:
+  wikinet:
+    driver: bridge

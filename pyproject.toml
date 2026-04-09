@@ -11,6 +11,8 @@ dependencies = [
     "baml-py>=0.207.1",
     "python-dotenv>=1.0.0",
     "mcp>=1.0.0",
+    "anthropic>=0.40.0",
+    "uvicorn>=0.30.0",
 ]
 
 [project.optional-dependencies]
