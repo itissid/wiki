@@ -1,0 +1,31 @@
+#!/bin/bash
+# Warn if uv.lock has changed and require explicit confirmation
+
+if git diff --cached --name-only | grep -q '^uv.lock$'; then
+    echo ""
+    echo "========================================="
+    echo "  WARNING: uv.lock has been modified!"
+    echo "========================================="
+    echo ""
+    echo "  Dependencies have changed. This affects"
+    echo "  what gets installed in production containers."
+    echo ""
+    git diff --cached --stat uv.lock | head -3
+    echo ""
+
+    # If running non-interactively, block the commit
+    if [ ! -t 0 ]; then
+        echo "  BLOCKED: non-interactive commit with uv.lock changes."
+        echo "  Review changes and commit with: git commit --no-verify"
+        exit 1
+    fi
+
+    read -p "  Do you approve these dependency changes? [y/N] " -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "  Commit aborted. Run 'git checkout uv.lock' to revert."
+        exit 1
+    fi
+    echo "  Approved. Proceeding with commit."
+    echo ""
+fi

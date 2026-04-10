@@ -2234,7 +2234,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "anthropic", specifier = ">=0.40.0" },
+    { name = "anthropic", specifier = ">=0.41.0" },
     { name = "baml-py", specifier = ">=0.207.1" },
     { name = "chromadb", specifier = ">=0.5.0" },
     { name = "fastembed", specifier = ">=0.4.0" },

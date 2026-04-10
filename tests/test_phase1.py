@@ -1,7 +1,7 @@
 """Phase 1 smoke tests: chunking and indexing."""
 
 from src.chunker import chunk_wiki
-from src.indexer import build_index, is_indexed, load_index, _embed_texts
+from src.indexer import build_index, is_indexed, load_index, _embed_texts, export_markdown, _sanitize_filename
 
 SAMPLE_WIKI = """# Page: Getting Started
 ## Installation
@@ -86,3 +86,64 @@ def test_bm25_scores_work(tmp_path):
     scores = bm25.get_scores("websocket transport".split())
     assert len(scores) == len(chunks)
     assert max(scores) > 0  # At least one chunk should match
+
+
+def test_sanitize_filename():
+    assert _sanitize_filename("Getting Started") == "Getting Started"
+    assert _sanitize_filename("API / REST") == "API _ REST"
+    assert _sanitize_filename('File: "config"') == "File_ _config_"
+    assert _sanitize_filename("...dots...") == "dots"
+    assert _sanitize_filename("") == "untitled"
+    assert _sanitize_filename("a/b\\c:d") == "a_b_c_d"
+
+
+def test_build_index_exports_markdown(tmp_path):
+    """build_index should auto-generate pages/*.md files."""
+    data_dir = str(tmp_path)
+    build_index("test/repo", SAMPLE_WIKI, data_dir)
+
+    pages_dir = tmp_path / "test_repo" / "pages"
+    assert pages_dir.exists()
+
+    md_files = sorted(f.name for f in pages_dir.glob("*.md"))
+    assert "Getting Started.md" in md_files
+    assert "Transport Layer.md" in md_files
+
+    # Verify content
+    content = (pages_dir / "Getting Started.md").read_text()
+    assert "# Getting Started" in content
+    assert "pip install pipecat-ai" in content
+
+
+def test_export_markdown_standalone(tmp_path):
+    """export_markdown should work on already-indexed repos."""
+    data_dir = str(tmp_path)
+    build_index("test/repo", SAMPLE_WIKI, data_dir)
+
+    # Delete pages dir to simulate pre-existing index without export
+    pages_dir = tmp_path / "test_repo" / "pages"
+    for f in pages_dir.glob("*.md"):
+        f.unlink()
+    pages_dir.rmdir()
+    assert not pages_dir.exists()
+
+    # Re-export from chunks.pkl
+    count = export_markdown("test/repo", data_dir)
+    assert count == 2  # Getting Started + Transport Layer
+    assert pages_dir.exists()
+    assert len(list(pages_dir.glob("*.md"))) == 2
+
+
+def test_export_markdown_cleans_old_files(tmp_path):
+    """Re-export should remove stale .md files from a previous run."""
+    data_dir = str(tmp_path)
+    build_index("test/repo", SAMPLE_WIKI, data_dir)
+
+    pages_dir = tmp_path / "test_repo" / "pages"
+    # Add a stale file
+    (pages_dir / "Old Page.md").write_text("stale")
+    assert (pages_dir / "Old Page.md").exists()
+
+    # Re-export
+    export_markdown("test/repo", data_dir)
+    assert not (pages_dir / "Old Page.md").exists()

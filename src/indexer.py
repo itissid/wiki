@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import pickle
+import re
 from pathlib import Path
 
 import chromadb
@@ -110,7 +111,62 @@ def build_index(repo: str, wiki_text: str, data_dir: str = "./data") -> int:
         pickle.dump(chunks, f)
 
     logger.info("Index complete for %s: %d chunks stored at %s", repo, len(chunks), repo_path)
+
+    # Export per-page markdown for external viewers (Obsidian, etc.)
+    export_markdown(repo, data_dir)
+
     return len(chunks)
+
+
+def _sanitize_filename(title: str) -> str:
+    """Convert a wiki page title to a safe filename.
+
+    Replaces characters invalid on macOS/Windows/Linux with underscores.
+    Strips leading/trailing whitespace and dots.
+    """
+    safe = re.sub(r'[/\\:*?"<>|]', '_', title)
+    safe = safe.strip('. ')
+    safe = re.sub(r'_+', '_', safe)
+    return safe or "untitled"
+
+
+def export_markdown(repo: str, data_dir: str = "./data") -> int:
+    """Export per-page .md files from an existing index's chunks.pkl.
+
+    Writes to data/{repo}/pages/{PageTitle}.md.
+    Returns the number of pages exported.
+    """
+    repo_path = _repo_dir(repo, data_dir)
+    chunks_file = repo_path / "chunks.pkl"
+    if not chunks_file.exists():
+        raise FileNotFoundError(f"No chunks.pkl found for {repo} at {repo_path}")
+
+    with open(chunks_file, "rb") as f:
+        chunks: list[WikiChunk] = pickle.load(f)
+
+    # Group chunks by page, preserving order
+    pages: dict[str, list[str]] = {}
+    for chunk in chunks:
+        if chunk.page not in pages:
+            pages[chunk.page] = []
+        pages[chunk.page].append(chunk.text)
+
+    # Write per-page markdown files
+    pages_dir = repo_path / "pages"
+    # Clean out old pages on re-export
+    if pages_dir.exists():
+        for old_file in pages_dir.iterdir():
+            if old_file.suffix == ".md":
+                old_file.unlink()
+    pages_dir.mkdir(parents=True, exist_ok=True)
+
+    for page_title, texts in pages.items():
+        filename = _sanitize_filename(page_title) + ".md"
+        content = f"# {page_title}\n\n" + "\n\n".join(texts)
+        (pages_dir / filename).write_text(content, encoding="utf-8")
+
+    logger.info("Exported %d pages as markdown to %s", len(pages), pages_dir)
+    return len(pages)
 
 
 def list_indexed_repos(data_dir: str = "./data") -> list[str]:
