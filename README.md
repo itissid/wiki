@@ -7,8 +7,8 @@ Claude CLI for answer generation.
 # Why?
 
 Deepwiki's answer qustion API was down/unreliable in march-april 2026. This is a significant resource to ground
-Claude efficiently. It uses a hybrid retriever mixing together traditional BM25 and ChromeDB vector store to 
-let the retriever quickly find answers to questions.
+Claude efficiently. It uses a hybrid retriever mixing together TF-IDF based BM25 and ChromeDB vector store and a RRF 
+ranker/fusion.
 
 ## Architecture
 
