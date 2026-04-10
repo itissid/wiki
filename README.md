@@ -4,6 +4,12 @@ Local hybrid RAG server that replaces DeepWiki's `ask_question` with a
 BM25 + vector search pipeline. Exposes 3 MCP tools over stdio and uses
 Claude CLI for answer generation.
 
+# Why?
+
+Deepwiki's answer qustion API was down/unreliable in march-april 2026. This is a significant resource to ground
+Claude efficiently. It uses a hybrid retriever mixing together traditional BM25 and ChromeDB vector store to 
+let the retriever quickly find answers to questions.
+
 ## Architecture
 
 ```
