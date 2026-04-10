@@ -7,8 +7,10 @@ Claude CLI for answer generation.
 # Why?
 
 Deepwiki's answer qustion API was down/unreliable in march-april 2026. This is a significant resource to ground
-Claude efficiently. It uses a hybrid retriever mixing together TF-IDF based BM25 and ChromeDB vector store and a RRF 
-ranker/fusion.
+Claude efficiently. It uses a hybrid retriever which rankes a combined list of TF-IDF based BM25 and ChromeDB vector store and passes it to a RRF 
+ranker/fusion for final output to the LLM to compose results from.
+
+This was built entirely with claude and sits on my home server as a local MCP.
 
 ## Architecture
 
@@ -365,6 +367,9 @@ tail -f ~/.claude/logs/mcp-*.log 2>/dev/null || echo "No MCP logs found"
 ```
 
 ## Updating Dependencies
+
+After a recent spate of supply chain attacks I felt necessary to have this section as 
+a reminder to myself of good practices for package upgrading.
 
 Dependencies are pinned in `uv.lock` with SHA256 hashes. The Dockerfile
 uses `--frozen` so container builds never re-resolve — they install exactly
